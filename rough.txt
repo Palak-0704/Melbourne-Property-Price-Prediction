@@ -1,0 +1,18 @@
+ Project Contents:
+
+1. EDA (Exploratory Data Analysis)
+2. Feature Engineering
+Feature Extraction
+Dropping High Correlated Variables
+Handling Duplicated Rows
+Missing Values Handling
+Outlier Handling
+Encoding
+3. Model Building
+Model Training for Baseline Score
+Visual Comparing of Model Performances
+Hyper-parameter Optimization
+Feature Importance Visualization of Best Model
+Feature Importance
+Permutation Importance
+Building and Saving Best Model
