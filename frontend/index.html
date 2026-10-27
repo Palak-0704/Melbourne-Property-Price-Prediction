@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Melbourne Property Valuation — CatBoost Model</title>
+<meta name="description" content="Estimate the sale price of a Melbourne property with a gradient-boosted CatBoost model trained on 13,000+ recorded sales." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,900&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<header class="topbar">
+  <a class="wordmark" href="/">
+    <span class="mark">M</span>
+    <span class="wordmark-text">MELB<em>/</em>VALUATION</span>
+  </a>
+  <div class="topbar-meta">
+    <span class="pill" id="status-pill"><span class="dot"></span> connecting…</span>
+    <span class="mono muted" id="model-tag">model · —</span>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <p class="eyebrow">Gradient-boosted valuation · Victoria, AU</p>
+    <h1>What is your <em>Melbourne</em> property worth?</h1>
+    <p class="lede">
+      Enter the details of a dwelling and a CatBoost regression model — trained on
+      thirteen thousand recorded sales across 314 suburbs — will estimate its market value.
+    </p>
+    <dl class="stat-strip" id="stat-strip">
+      <div><dt>Model accuracy (R²)</dt><dd id="stat-r2">—</dd></div>
+      <div><dt>Median abs. error</dt><dd id="stat-mae">—</dd></div>
+      <div><dt>Mean abs. % error</dt><dd id="stat-mape">—</dd></div>
+      <div><dt>Training records</dt><dd id="stat-rows">—</dd></div>
+    </dl>
+  </section>
+
+  <section class="workspace">
+    <form class="card form-card" id="predict-form" novalidate>
+      <fieldset>
+        <legend><span class="idx">01</span> Location</legend>
+        <div class="grid">
+          <label class="field span-2">
+            <span>Suburb</span>
+            <input id="f-Suburb" name="Suburb" list="suburb-list" placeholder="Start typing…" autocomplete="off" required />
+            <datalist id="suburb-list"></datalist>
+          </label>
+          <label class="field">
+            <span>Region</span>
+            <select id="f-Regionname" name="Regionname"></select>
+          </label>
+          <label class="field">
+            <span>Council area</span>
+            <select id="f-CouncilArea" name="CouncilArea"></select>
+          </label>
+          <label class="field">
+            <span>Distance to CBD <small>km</small></span>
+            <input id="f-Distance" name="Distance" type="number" step="0.1" min="0" />
+          </label>
+          <label class="field">
+            <span>Postcode</span>
+            <input id="f-Postcode" name="Postcode" type="number" step="1" min="3000" max="3999" />
+          </label>
+          <label class="field">
+            <span>Latitude</span>
+            <input id="f-Lattitude" name="Lattitude" type="number" step="0.0001" />
+          </label>
+          <label class="field">
+            <span>Longitude</span>
+            <input id="f-Longtitude" name="Longtitude" type="number" step="0.0001" />
+          </label>
+          <label class="field">
+            <span>Suburb population <small># properties</small></span>
+            <input id="f-Propertycount" name="Propertycount" type="number" step="1" min="0" />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="idx">02</span> The property</legend>
+        <div class="grid">
+          <label class="field">
+            <span>Property type</span>
+            <select id="f-Type" name="Type"></select>
+          </label>
+          <label class="field">
+            <span>Rooms</span>
+            <input id="f-Rooms" name="Rooms" type="number" step="1" min="1" max="12" />
+          </label>
+          <label class="field">
+            <span>Bedrooms</span>
+            <input id="f-Bedroom2" name="Bedroom2" type="number" step="1" min="0" max="12" />
+          </label>
+          <label class="field">
+            <span>Bathrooms</span>
+            <input id="f-Bathroom" name="Bathroom" type="number" step="1" min="0" max="10" />
+          </label>
+          <label class="field">
+            <span>Car spaces</span>
+            <input id="f-Car" name="Car" type="number" step="1" min="0" max="10" />
+          </label>
+          <label class="field">
+            <span>Land size <small>m²</small></span>
+            <input id="f-Landsize" name="Landsize" type="number" step="1" min="0" />
+          </label>
+          <label class="field">
+            <span>Building area <small>m²</small></span>
+            <input id="f-BuildingArea" name="BuildingArea" type="number" step="1" min="0" />
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend><span class="idx">03</span> The sale</legend>
+        <div class="grid">
+          <label class="field">
+            <span>Sale method</span>
+            <select id="f-Method" name="Method"></select>
+          </label>
+          <label class="field">
+            <span>Listing agency</span>
+            <select id="f-SellerG" name="SellerG"></select>
+          </label>
+          <label class="field span-2">
+            <span>Sale date</span>
+            <input id="f-Date" name="Date" type="date" value="2017-06-01" />
+          </label>
+        </div>
+      </fieldset>
+
+      <button type="submit" class="submit" id="submit-btn">
+        <span class="submit-label">Estimate value</span>
+        <span class="submit-arrow">→</span>
+      </button>
+      <p class="form-note">Blank fields fall back to suburb medians. Estimates are indicative only.</p>
+    </form>
+
+    <aside class="card result-card" id="result-card">
+      <div class="result-empty" id="result-empty">
+        <div class="result-empty-glyph">◈</div>
+        <h3>No estimate yet</h3>
+        <p>Fill in the property details and the model will return a valuation with a confidence range and comparable sales.</p>
+      </div>
+
+      <div class="result-body" id="result-body" hidden>
+        <p class="result-kicker">Estimated sale price</p>
+        <p class="result-price" id="result-price">$0</p>
+        <p class="result-range" id="result-range">—</p>
+
+        <div class="band">
+          <div class="band-track">
+            <span class="band-fill" id="band-fill"></span>
+            <span class="band-marker" id="band-marker"></span>
+          </div>
+          <div class="band-labels">
+            <span id="band-low">—</span>
+            <span class="band-mid">confidence range</span>
+            <span id="band-high">—</span>
+          </div>
+        </div>
+
+        <div class="result-facts">
+          <div><span>Per room</span><strong id="fact-per-room">—</strong></div>
+          <div><span>Comparable median</span><strong id="fact-comp">—</strong></div>
+          <div><span>Model confidence</span><strong id="fact-conf">—</strong></div>
+        </div>
+
+        <div class="comparables">
+          <h4>Recently sold nearby</h4>
+          <table id="comp-table">
+            <thead><tr><th>Address</th><th>Type</th><th>Rooms</th><th class="ta-r">Price</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="result-loading" id="result-loading" hidden>
+        <div class="spinner"></div>
+        <p>Scoring with CatBoost…</p>
+      </div>
+
+      <div class="result-error" id="result-error" hidden></div>
+    </aside>
+  </section>
+</main>
+
+<footer class="footer">
+  <p>Built on the Melbourne Housing dataset · CatBoostRegressor (depth 7, 1,000 trees) · 20 engineered features.</p>
+  <p class="muted">Frontend served by the Flask API that hosts the model.</p>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
